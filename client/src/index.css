@@ -1222,8 +1222,9 @@ input, textarea, select { font-family: 'DM Sans', sans-serif; }
 
 .landing-stats { padding: 60px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
 .landing-stats__grid {
-  display: grid; grid-template-columns: repeat(4, 1fr);
+  display: grid; grid-template-columns: repeat(3, 1fr);
   gap: 32px; text-align: center;
+  max-width: 720px; margin: 0 auto;
 }
 .landing-stats__value {
   font-family: 'Syne', sans-serif; font-weight: 800; font-size: 42px;

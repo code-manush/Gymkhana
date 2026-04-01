@@ -9,15 +9,13 @@ const features = [
   { icon: Users,    title: 'Club Discovery',    desc: 'Explore technical, cultural, and sports clubs. Find your community.',  color: '#FF6584' },
   { icon: Trophy,   title: 'Live Results',      desc: 'Real-time leaderboards and result publication for all competitions.',   color: '#F5C842' },
   { icon: Shield,   title: 'Role-Based Access', desc: 'Secure platform with distinct views for students, coordinators, and admins.', color: '#4ECDC4' },
-  { icon: Star,     title: 'Media Gallery',     desc: 'Relive memories through an organized archive of event photos.',         color: '#FF6B6B' },
-  { icon: Zap,      title: 'OAuth Login',       desc: 'Sign in instantly with your IIITV institute email via OAuth 2.0.',      color: '#A78BFA' },
+  { icon: Star,     title: 'Media Gallery Archive',     desc: 'Relive memories through an organized archive of event photos.',         color: '#FF6B6B' },
 ]
 
 const stats = [
-  { value: '25+',   label: 'Active Clubs' },
+  { value: '10+',   label: 'Active Clubs' },
   { value: '500+',  label: 'Students' },
-  { value: '100+',  label: 'Events/Year' },
-  { value: '99.5%', label: 'Uptime' },
+  { value: '20+',  label: 'Events/Year' },
 ]
 
 export default function LandingPage() {
@@ -279,7 +277,7 @@ const _css = `
 }
 .landing-stats__grid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 32px;
   text-align: center;
 }

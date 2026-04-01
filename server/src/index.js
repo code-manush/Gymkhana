@@ -1,15 +1,15 @@
 require('dotenv').config()
-const express    = require('express')
-const cors       = require('cors')
-const helmet     = require('helmet')
-const rateLimit  = require('express-rate-limit')
+const express   = require('express')
+const cors      = require('cors')
+const helmet    = require('helmet')
+const rateLimit = require('express-rate-limit')
 
 const app = express()
 
 // ── Security & parsing ─────────────────────────────────────────
 app.use(helmet())
 app.use(cors({
-  origin:      'http://localhost:5173',   // your Vite dev server
+  origin:      process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
 }))
 app.use(express.json())
@@ -22,6 +22,7 @@ app.use('/api/registrations', require('./routes/registrations'))
 app.use('/api/clubs',         require('./routes/clubs'))
 app.use('/api/results',       require('./routes/results'))
 app.use('/api/admin',         require('./routes/admin'))
+app.use('/api/coordinator',   require('./routes/coordinator'))
 
 // ── Health check ───────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok' }))

@@ -2,11 +2,15 @@ const router = require('express').Router()
 const pool = require('../config/db')
 const { requireAuth, attachUser } = require('../middleware/auth')
 
-// GET /api/registrations/my  — must come before /:eventId
+/**
+ * GET /api/registrations/my
+ * Returns the current user's registrations.
+ */
 router.get('/my', requireAuth, attachUser, async (req, res, next) => {
   try {
     const [rows] = await pool.query(
-      `SELECT r.*, e.event_name, e.event_date, e.location, e.category, e.status AS event_status
+      `SELECT r.*, e.event_name, e.event_date, e.location,
+              e.category, e.status AS event_status, e.visitor_open
        FROM registrations r
        JOIN events e ON r.event_id = e.id
        WHERE r.user_id = ? AND r.status != 'cancelled'
@@ -19,29 +23,44 @@ router.get('/my', requireAuth, attachUser, async (req, res, next) => {
   }
 })
 
-// POST /api/registrations/:eventId  — register for an event
+/**
+ * POST /api/registrations/:eventId
+ * Register current user for an event.
+ * Visitors can only register for visitor_open events.
+ */
 router.post('/:eventId', requireAuth, attachUser, async (req, res, next) => {
   try {
     const { eventId } = req.params
+    const { role, id: userId } = req.user
 
-    // Fetch event + current registration count together
     const [[event]] = await pool.query(
-      `SELECT e.capacity, e.status,
+      `SELECT e.capacity, e.status, e.visitor_open,
         (SELECT COUNT(*) FROM registrations r
          WHERE r.event_id = e.id AND r.status = 'confirmed') AS registered
        FROM events e WHERE e.id = ?`,
       [eventId]
     )
 
-    if (!event)   return res.status(404).json({ error: 'Event not found' })
-    if (event.status === 'completed')
-                  return res.status(400).json({ error: 'Event is already completed' })
-    if (event.registered >= event.capacity)
-                  return res.status(400).json({ error: 'Event is full' })
+    if (!event) return res.status(404).json({ error: 'Event not found' })
+
+    if (event.status === 'completed') {
+      return res.status(400).json({ error: 'Event is already completed' })
+    }
+
+    // Visitor restriction
+    if (role === 'visitor' && !event.visitor_open) {
+      return res.status(403).json({
+        error: 'This event is only open to IIITV students. Visitors cannot register.',
+      })
+    }
+
+    if (event.registered >= event.capacity) {
+      return res.status(400).json({ error: 'Event is full' })
+    }
 
     await pool.query(
       'INSERT INTO registrations (event_id, user_id) VALUES (?, ?)',
-      [eventId, req.user.id]
+      [eventId, userId]
     )
     res.status(201).json({ success: true })
   } catch (err) {
@@ -52,7 +71,9 @@ router.post('/:eventId', requireAuth, attachUser, async (req, res, next) => {
   }
 })
 
-// DELETE /api/registrations/:eventId  — cancel registration
+/**
+ * DELETE /api/registrations/:eventId — cancel registration
+ */
 router.delete('/:eventId', requireAuth, attachUser, async (req, res, next) => {
   try {
     const [result] = await pool.query(
@@ -69,16 +90,34 @@ router.delete('/:eventId', requireAuth, attachUser, async (req, res, next) => {
   }
 })
 
-// GET /api/registrations/:eventId  — list registrants (admin/coordinator)
+/**
+ * GET /api/registrations/:eventId
+ * List registrants — admin or assigned coordinator only.
+ */
 router.get('/:eventId', requireAuth, attachUser, async (req, res, next) => {
   try {
+    const { role, id: userId } = req.user
+    const eventId = req.params.eventId
+
+    if (role === 'coordinator') {
+      const [[assignment]] = await pool.query(
+        'SELECT id FROM event_coordinators WHERE event_id = ? AND user_id = ?',
+        [eventId, userId]
+      )
+      if (!assignment) {
+        return res.status(403).json({ error: 'You are not the coordinator for this event' })
+      }
+    } else if (role !== 'admin') {
+      return res.status(403).json({ error: 'Insufficient permissions' })
+    }
+
     const [rows] = await pool.query(
-      `SELECT r.*, u.first_name, u.last_name, u.email
+      `SELECT r.*, u.first_name, u.last_name, u.email, u.role AS user_role
        FROM registrations r
        JOIN users u ON r.user_id = u.id
        WHERE r.event_id = ? AND r.status = 'confirmed'
        ORDER BY r.registered_at ASC`,
-      [req.params.eventId]
+      [eventId]
     )
     res.json(rows)
   } catch (err) {

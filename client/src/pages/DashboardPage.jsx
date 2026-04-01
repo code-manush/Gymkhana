@@ -1,39 +1,62 @@
+import { useEffect, useState } from 'react'
 import { useUser } from '@clerk/clerk-react'
 import { Link } from 'react-router-dom'
-import { Calendar, Users, Trophy, Bell, ArrowRight, Clock, CheckCircle2, Star } from 'lucide-react'
+import { Calendar, Users, Trophy, Bell, ArrowRight, Clock, CheckCircle2, Star, Eye } from 'lucide-react'
 import DashboardLayout from '../components/DashboardLayout'
 import StatCard from '../components/StatCard'
 import EventCard from '../components/EventCard'
-
-const upcomingEvents = [
-  { id: 1, eventName: 'Hackathon 2025', description: 'Annual 24-hour coding competition. Build innovative solutions for real-world problems.', eventDate: '2025-04-10', location: 'Main Auditorium', capacity: 200, registered: 145, status: 'registration_open', club: 'Technical Club', category: 'Technical' },
-  { id: 2, eventName: 'Culturals Night', description: 'An evening celebrating art, music, dance and theatre performances.', eventDate: '2025-04-18', location: 'Open Air Theatre', capacity: 500, registered: 310, status: 'upcoming', club: 'Cultural Club', category: 'Cultural' },
-  { id: 3, eventName: 'Inter-College Cricket', description: 'Inter-college cricket tournament with teams from 8 colleges.', eventDate: '2025-04-25', location: 'Sports Ground', capacity: 80, registered: 72, status: 'upcoming', club: 'Sports Club', category: 'Sports' },
-]
-
-const notifications = [
-  { id: 1, text: 'Your registration for Hackathon 2025 is confirmed.', time: '2h ago', type: 'success' },
-  { id: 2, text: 'Culturals Night registration is now open!',          time: '5h ago', type: 'info' },
-  { id: 3, text: 'Result for Badminton Tournament published.',          time: '1d ago', type: 'result' },
-]
-
-const myRegistrations = [
-  { event: 'Hackathon 2025',      status: 'Confirmed', date: 'Apr 10', color: '#10B981' },
-  { event: 'Photography Contest', status: 'Pending',   date: 'Mar 28', color: '#F59E0B' },
-  { event: 'Quiz Championship',   status: 'Completed', date: 'Mar 15', color: '#6B6B8A' },
-]
+import { useApi } from '../lib/api'
 
 const quickActions = [
-  { label: 'Browse Events',  to: '/events',  color: '#7C74FF', icon: Calendar },
-  { label: 'Explore Clubs',  to: '/clubs',   color: '#FF6584', icon: Users },
-  { label: 'View Results',   to: '/results', color: '#F5C842', icon: Trophy },
-  { label: 'My Profile',     to: '/profile', color: '#4ECDC4', icon: Star },
+  { label: 'Browse Events', to: '/events',  color: '#7C74FF', icon: Calendar },
+  { label: 'Explore Clubs', to: '/clubs',   color: '#FF6584', icon: Users    },
+  { label: 'View Results',  to: '/results', color: '#F5C842', icon: Trophy   },
+  { label: 'My Profile',    to: '/profile', color: '#4ECDC4', icon: Star     },
 ]
+
+const roleDescriptions = {
+  admin:       { label: 'Admin',             color: '#FF6584', bg: 'rgba(255,101,132,0.1)', desc: 'You have full platform access.' },
+  coordinator: { label: 'Event Coordinator', color: '#F59E0B', bg: 'rgba(245,158,11,0.1)',  desc: 'Manage your assigned event(s).' },
+  student:     { label: 'Student',           color: '#7C74FF', bg: 'rgba(108,99,255,0.1)',  desc: 'Discover and register for events.' },
+  visitor:     { label: 'Visitor',           color: '#4ECDC4', bg: 'rgba(78,205,196,0.1)',  desc: 'You can join open visitor events.' },
+}
 
 export default function DashboardPage() {
   const { user } = useUser()
+  const api = useApi()
+
+  const [dbUser, setDbUser]           = useState(null)
+  const [upcomingEvents, setUpcoming] = useState([])
+  const [myRegs, setMyRegs]           = useState([])
+  const [loading, setLoading]         = useState(true)
+
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const [u, ev, regs] = await Promise.all([
+          api.get('/api/users/me'),
+          api.get('/api/events'),
+          api.get('/api/registrations/my'),
+        ])
+        setDbUser(u)
+        setUpcoming(ev.slice(0, 3))
+        setMyRegs(regs.slice(0, 3))
+      } catch (err) {
+        console.error(err)
+      }
+      setLoading(false)
+    }
+    load()
+  }, [])
+
+  const role = dbUser?.role || 'student'
+  const roleInfo = roleDescriptions[role] || roleDescriptions.student
+  const isVisitor = role === 'visitor'
+
+  const statusColor = { confirmed: '#10B981', cancelled: '#FF6584', waitlisted: '#F59E0B' }
 
   return (
     <DashboardLayout>
@@ -44,12 +67,27 @@ export default function DashboardPage() {
           {user?.firstName ? `Hello, ${user.firstName}!` : 'Welcome back!'}
         </h1>
         <p className="page-header__sub">Here's what's happening in Gymkhana today.</p>
+
+        {/* Role badge */}
+        {dbUser && (
+          <div className="role-badge-row">
+            <span className="role-badge-inline" style={{ color: roleInfo.color, background: roleInfo.bg }}>
+              {roleInfo.label}
+            </span>
+            <span className="role-badge-desc">{roleInfo.desc}</span>
+            {isVisitor && (
+              <span className="visitor-notice">
+                <Eye size={11} /> Only visitor-open events are shown to you.
+              </span>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Stats */}
       <div className="stats-grid">
-        <StatCard icon={Calendar} label="Upcoming Events" value="8"  sub="Next: Apr 10"   color="#7C74FF" delay={0.05} />
-        <StatCard icon={Users}    label="My Clubs"        value="3"  sub="Active member"  color="#FF6584" delay={0.10} />
+        <StatCard icon={Calendar} label="Upcoming Events" value={upcomingEvents.length.toString()} sub="Events available"   color="#7C74FF" delay={0.05} />
+        <StatCard icon={CheckCircle2} label="My Registrations" value={myRegs.length.toString()} sub="Active"           color="#10B981" delay={0.10} />
         <StatCard icon={Trophy}   label="Achievements"    value="5"  sub="This semester"  color="#F5C842" delay={0.15} />
         <StatCard icon={Bell}     label="Notifications"   value="3"  sub="2 unread"       color="#4ECDC4" delay={0.20} />
       </div>
@@ -62,48 +100,58 @@ export default function DashboardPage() {
             <h2 className="glass-card__title">My Registrations</h2>
             <Link to="/events" className="glass-card__link">View all</Link>
           </div>
+          {loading && <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Loading…</p>}
+          {!loading && myRegs.length === 0 && (
+            <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+              No registrations yet. <Link to="/events" style={{ color: '#7C74FF' }}>Browse events →</Link>
+            </p>
+          )}
           <div className="item-list">
-            {myRegistrations.map((r, i) => (
-              <div key={i} className="item-row">
-                <div className="item-row__dot" style={{ background: r.color }} />
-                <div className="item-row__body">
-                  <p className="item-row__name">{r.event}</p>
-                  <p className="item-row__sub">{r.date}</p>
+            {myRegs.map((r, i) => {
+              const sc = statusColor[r.status] || '#6B6B8A'
+              return (
+                <div key={i} className="item-row">
+                  <div className="item-row__dot" style={{ background: sc }} />
+                  <div className="item-row__body">
+                    <p className="item-row__name">{r.event_name}</p>
+                    <p className="item-row__sub">{new Date(r.event_date).toLocaleDateString('en-IN', { dateStyle: 'medium' })}</p>
+                  </div>
+                  <span className="item-row__badge" style={{ color: sc, background: `${sc}15` }}>
+                    {r.status}
+                  </span>
                 </div>
-                <span className="item-row__badge" style={{ color: r.color, background: `${r.color}15` }}>
-                  {r.status}
-                </span>
-              </div>
-            ))}
+              )
+            })}
           </div>
         </div>
 
-        {/* Notifications */}
+        {/* Role-specific shortcut */}
         <div className="glass-card">
-          <div className="glass-card__header">
-            <h2 className="glass-card__title">Notifications</h2>
-            <span className="glass-card__meta">3 new</span>
-          </div>
-          <div className="item-list">
-            {notifications.map((n) => (
-              <div key={n.id} className="notif-row">
-                <div className="notif-row__icon">
-                  {n.type === 'success' && <CheckCircle2 size={15} color="#10B981" />}
-                  {n.type === 'info'    && <Bell         size={15} color="#7C74FF" />}
-                  {n.type === 'result'  && <Star         size={15} color="#F5C842" />}
-                </div>
-                <div>
-                  <p className="notif-row__text">{n.text}</p>
-                  <p className="notif-row__time"><Clock size={10} /> {n.time}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="glass-card">
-          <h2 className="glass-card__title" style={{ marginBottom: 16 }}>Quick Actions</h2>
+          <h2 className="glass-card__title" style={{ marginBottom: 14 }}>
+            {role === 'admin' ? 'Admin Panel' : role === 'coordinator' ? 'Coordinator Panel' : 'Quick Actions'}
+          </h2>
+          {(role === 'admin' || role === 'coordinator') && (
+            <div className="quick-actions" style={{ marginBottom: 12 }}>
+              {role === 'admin' && (
+                <Link to="/admin" className="quick-action">
+                  <div className="quick-action__icon" style={{ background: 'rgba(255,101,132,0.15)' }}>
+                    <Star size={15} style={{ color: '#FF6584' }} />
+                  </div>
+                  <span className="quick-action__label">Admin Dashboard</span>
+                  <ArrowRight size={14} className="quick-action__arrow" />
+                </Link>
+              )}
+              {(role === 'admin' || role === 'coordinator') && (
+                <Link to="/coordinator" className="quick-action">
+                  <div className="quick-action__icon" style={{ background: 'rgba(245,158,11,0.15)' }}>
+                    <Calendar size={15} style={{ color: '#F59E0B' }} />
+                  </div>
+                  <span className="quick-action__label">Coordinator Dashboard</span>
+                  <ArrowRight size={14} className="quick-action__arrow" />
+                </Link>
+              )}
+            </div>
+          )}
           <div className="quick-actions">
             {quickActions.map((a, i) => (
               <Link key={i} to={a.to} className="quick-action">
@@ -116,181 +164,88 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
+
+        {/* Visitor notice OR notifications */}
+        <div className="glass-card">
+          {isVisitor ? (
+            <>
+              <h2 className="glass-card__title" style={{ marginBottom: 12 }}>Visitor Access</h2>
+              <div className="visitor-info-card">
+                <Eye size={28} color="#4ECDC4" style={{ marginBottom: 10 }} />
+                <p style={{ fontSize: 13.5, color: 'var(--text)', fontWeight: 600, marginBottom: 6 }}>
+                  You're signed in as a Visitor
+                </p>
+                <p style={{ fontSize: 12.5, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                  Visitors can participate in events that are explicitly open to the public.
+                  Events marked <strong style={{ color: '#4ECDC4' }}>Open to Visitors</strong> will appear in your events list.
+                  College-exclusive events are hidden.
+                </p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="glass-card__header">
+                <h2 className="glass-card__title">Notifications</h2>
+                <span className="glass-card__meta">3 new</span>
+              </div>
+              <div className="item-list">
+                {[
+                  { text: 'Your registration is confirmed.', time: '2h ago', type: 'success' },
+                  { text: 'Culturals Night registration is now open!', time: '5h ago', type: 'info' },
+                  { text: 'Result for Badminton published.', time: '1d ago', type: 'result' },
+                ].map((n, i) => (
+                  <div key={i} className="notif-row">
+                    <div className="notif-row__icon">
+                      {n.type === 'success' && <CheckCircle2 size={15} color="#10B981" />}
+                      {n.type === 'info'    && <Bell         size={15} color="#7C74FF" />}
+                      {n.type === 'result'  && <Star         size={15} color="#F5C842" />}
+                    </div>
+                    <div>
+                      <p className="notif-row__text">{n.text}</p>
+                      <p className="notif-row__time"><Clock size={10} /> {n.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Upcoming Events */}
       <div className="section">
         <div className="section__header">
-          <h2 className="section__title">Upcoming Events</h2>
+          <h2 className="section__title">
+            {isVisitor ? 'Open Events' : 'Upcoming Events'}
+          </h2>
           <Link to="/events" className="section__link">View all <ArrowRight size={14} /></Link>
         </div>
+        {loading && <p style={{ color: 'var(--text-muted)', fontSize: 13 }}>Loading events…</p>}
         <div className="cards-grid-3">
-          {upcomingEvents.map(event => (
-            <EventCard key={event.id} event={event} />
-          ))}
+          {upcomingEvents.map(event => <EventCard key={event.id} event={event} />)}
         </div>
       </div>
     </DashboardLayout>
   )
 }
 
-/* ── DashboardPage Styles ── */
+/* ── DashboardPage extra styles ── */
 const _css = `
-.page-header { margin-bottom: 36px; animation: fadeUp 0.5s var(--ease) both; }
-.page-header__greeting { font-size: 13px; color: var(--text-muted); margin-bottom: 6px; }
-.page-header__title {
-  font-family: 'Syne', sans-serif;
-  font-weight: 700;
-  font-size: 32px;
-  color: var(--text);
-  letter-spacing: -0.02em;
-  line-height: 1.15;
+.role-badge-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 10px;
 }
-.page-header__sub { font-size: 14px; color: var(--text-muted); margin-top: 6px; }
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 28px;
+.role-badge-inline {
+  font-size: 11px; font-weight: 700;
+  padding: 4px 12px; border-radius: 99px;
 }
-.dash-mid-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
-  margin-bottom: 36px;
+.role-badge-desc { font-size: 12px; color: var(--text-muted); }
+.visitor-notice {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 11px; color: #4ECDC4;
+  background: rgba(78,205,196,0.1); border: 1px solid rgba(78,205,196,0.2);
+  padding: 3px 10px; border-radius: 99px;
 }
-.glass-card {
-  background: var(--glass-bg);
-  backdrop-filter: blur(20px);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  padding: 24px;
-  animation: fadeUp 0.5s var(--ease) both;
-}
-.glass-card__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 18px;
-}
-.glass-card__title {
-  font-family: 'Syne', sans-serif;
-  font-weight: 700;
-  font-size: 16px;
-  color: var(--text);
-}
-.glass-card__link {
-  font-size: 12px;
-  color: #7C74FF;
-  text-decoration: none;
-}
-.glass-card__link:hover { text-decoration: underline; }
-.glass-card__meta { font-size: 12px; color: var(--text-muted); }
-.item-list { display: flex; flex-direction: column; gap: 8px; }
-.item-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: var(--surface);
-  border-radius: 12px;
-}
-.item-row__dot {
-  width: 7px; height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-.item-row__body { flex: 1; min-width: 0; }
-.item-row__name {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.item-row__sub { font-size: 11px; color: var(--text-muted); }
-.item-row__badge {
-  font-size: 11px;
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 99px;
-  white-space: nowrap;
-}
-.notif-row {
-  display: flex;
-  gap: 10px;
-  padding: 10px 12px;
-  background: var(--surface);
-  border-radius: 12px;
-}
-.notif-row__icon { flex-shrink: 0; margin-top: 2px; }
-.notif-row__text { font-size: 13px; color: var(--text); line-height: 1.4; }
-.notif-row__time {
-  font-size: 11px;
-  color: var(--text-muted);
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
-}
-.quick-actions { display: flex; flex-direction: column; gap: 8px; }
-.quick-action {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
-  background: var(--surface);
-  border-radius: 12px;
-  text-decoration: none;
-  transition: background 0.18s;
-}
-.quick-action:hover { background: var(--card); }
-.quick-action__icon {
-  width: 32px; height: 32px;
-  border-radius: 9px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.quick-action__label { font-size: 13px; color: var(--text); flex: 1; }
-.quick-action__arrow { color: var(--text-muted); transition: color 0.2s, transform 0.2s; }
-.quick-action:hover .quick-action__arrow { color: #7C74FF; transform: translateX(2px); }
-.section { }
-.section__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 20px;
-}
-.section__title {
-  font-family: 'Syne', sans-serif;
-  font-weight: 700;
-  font-size: 22px;
-  color: var(--text);
-  letter-spacing: -0.01em;
-}
-.section__link {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 13px;
-  color: #7C74FF;
-  text-decoration: none;
-}
-.section__link:hover { text-decoration: underline; }
-.cards-grid-3 {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 18px;
-}
-@media (max-width: 1100px) {
-  .stats-grid { grid-template-columns: repeat(2, 1fr); }
-  .dash-mid-grid { grid-template-columns: 1fr; }
-  .cards-grid-3 { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 680px) {
-  .cards-grid-3 { grid-template-columns: 1fr; }
+.visitor-info-card {
+  background: var(--surface); border-radius: 14px; padding: 20px; text-align: center;
 }
 `

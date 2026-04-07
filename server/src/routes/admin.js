@@ -33,9 +33,7 @@ router.get('/users', ...guard, async (req, res, next) => {
   }
 })
 
-// ── Update user role ─────────────────────────────────────────
-// Admin can set any user to: student | coordinator | admin | visitor
-// Note: promoting to coordinator also expects an event assignment (see below).
+// ── Update user role ──────────────────────────────────────────
 router.patch('/users/:id/role', ...guard, async (req, res, next) => {
   try {
     const { role } = req.body
@@ -50,9 +48,8 @@ router.patch('/users/:id/role', ...guard, async (req, res, next) => {
 })
 
 // ── Assign coordinator to an event ───────────────────────────
-// POST /api/admin/events/:eventId/coordinator
-// Body: { userId }  — user must have a college email
-// Steps: 1) verify college email, 2) set role = coordinator, 3) insert event_coordinators row
+// FIX: Only promote the user's role if they are currently a 'student'.
+// Admins assigned to events must NEVER have their role changed to 'coordinator'.
 router.post('/events/:eventId/coordinator', ...guard, async (req, res, next) => {
   try {
     const { userId } = req.body
@@ -60,25 +57,24 @@ router.post('/events/:eventId/coordinator', ...guard, async (req, res, next) => 
 
     if (!userId) return res.status(400).json({ error: 'userId is required' })
 
-    // Fetch the user
     const [[user]] = await pool.query('SELECT * FROM users WHERE id = ?', [userId])
     if (!user) return res.status(404).json({ error: 'User not found' })
 
-    // Only college-email users can be coordinators
     if (!user.email.endsWith('@iiitvadodara.ac.in')) {
       return res.status(400).json({
         error: 'Only @iiitvadodara.ac.in users can be assigned as coordinators',
       })
     }
 
-    // Verify event exists
     const [[event]] = await pool.query('SELECT id FROM events WHERE id = ?', [eventId])
     if (!event) return res.status(404).json({ error: 'Event not found' })
 
-    // Promote to coordinator role
-    await pool.query("UPDATE users SET role = 'coordinator' WHERE id = ?", [userId])
+    // ✅ FIX: Only promote to coordinator if the user is currently a student.
+    // Admins keep their role — they should never be downgraded.
+    if (user.role === 'student') {
+      await pool.query("UPDATE users SET role = 'coordinator' WHERE id = ?", [userId])
+    }
 
-    // Insert assignment (ignore duplicate)
     await pool.query(
       `INSERT INTO event_coordinators (event_id, user_id, assigned_by)
        VALUES (?, ?, ?)
@@ -93,7 +89,8 @@ router.post('/events/:eventId/coordinator', ...guard, async (req, res, next) => 
 })
 
 // ── Remove coordinator from event ────────────────────────────
-// DELETE /api/admin/events/:eventId/coordinator/:userId
+// FIX: When removing someone from an event, only revert to 'student'
+// if they are currently a 'coordinator'. Admins are never touched.
 router.delete('/events/:eventId/coordinator/:userId', ...guard, async (req, res, next) => {
   try {
     const { eventId, userId } = req.params
@@ -103,14 +100,21 @@ router.delete('/events/:eventId/coordinator/:userId', ...guard, async (req, res,
       [eventId, userId]
     )
 
-    // Check if the user still coordinates any other events; if not, revert to student
-    const [[{ count }]] = await pool.query(
-      'SELECT COUNT(*) AS count FROM event_coordinators WHERE user_id = ?',
-      [userId]
-    )
-    if (count === 0) {
-      await pool.query("UPDATE users SET role = 'student' WHERE id = ?", [userId])
+    // ✅ FIX: Fetch the user's current role before deciding to revert.
+    // Only revert to student if: (a) they are a coordinator, and
+    // (b) they have no other event assignments remaining.
+    const [[user]] = await pool.query('SELECT role FROM users WHERE id = ?', [userId])
+
+    if (user && user.role === 'coordinator') {
+      const [[{ count }]] = await pool.query(
+        'SELECT COUNT(*) AS count FROM event_coordinators WHERE user_id = ?',
+        [userId]
+      )
+      if (count === 0) {
+        await pool.query("UPDATE users SET role = 'student' WHERE id = ?", [userId])
+      }
     }
+    // Admins are never touched regardless of event assignments.
 
     res.json({ success: true })
   } catch (err) {
@@ -119,8 +123,6 @@ router.delete('/events/:eventId/coordinator/:userId', ...guard, async (req, res,
 })
 
 // ── Toggle event visitor access ───────────────────────────────
-// PATCH /api/admin/events/:eventId/visitor-access
-// Body: { visitor_open: true | false }
 router.patch('/events/:eventId/visitor-access', ...guard, async (req, res, next) => {
   try {
     const { visitor_open } = req.body
@@ -165,7 +167,6 @@ router.patch('/proposals/:id', ...guard, async (req, res, next) => {
       'UPDATE event_proposals SET status = ?, admin_notes = ? WHERE id = ?',
       [status, admin_notes || null, req.params.id]
     )
-    // If approved, create the actual event
     if (status === 'approved') {
       const [[p]] = await pool.query('SELECT * FROM event_proposals WHERE id = ?', [req.params.id])
       await pool.query(
@@ -180,7 +181,7 @@ router.patch('/proposals/:id', ...guard, async (req, res, next) => {
   }
 })
 
-// ── Submit proposal (coordinator) ────────────────────────────
+// ── Submit proposal (coordinator or admin) ────────────────────
 router.post(
   '/proposals',
   requireAuth, attachUser, requireRole('admin', 'coordinator'),

@@ -27,25 +27,36 @@ function Spinner() {
 }
 
 // ── Auth guard ─────────────────────────────────────────────────
+// FIX: Use getToken() from useAuth() — never rely on localStorage.__clerk_db_jwt
+// which is an internal Clerk key that is not guaranteed to exist.
 function ProtectedRoute({ children, allowedRoles }) {
-  const { isSignedIn, isLoaded } = useAuth()
-  const [dbUser, setDbUser]      = useState(null)
-  const [checking, setChecking]  = useState(true)
+  const { isSignedIn, isLoaded, getToken } = useAuth()
+  const [dbUser, setDbUser]   = useState(null)
+  const [checking, setChecking] = useState(true)
 
   useEffect(() => {
-    if (!isLoaded || !isSignedIn) { setChecking(false); return }
-    fetch(`${import.meta.env.VITE_API_URL}/api/users/me`, {
-      headers: { Authorization: `Bearer ${localStorage.getItem('__clerk_db_jwt')}` },
-    })
-      .then(r => r.ok ? r.json() : null)
-      .then(u => { setDbUser(u); setChecking(false) })
-      .catch(() => setChecking(false))
+    if (!isLoaded) return
+    if (!isSignedIn) { setChecking(false); return }
+
+    ;(async () => {
+      try {
+        const token = await getToken()          // ✅ correct Clerk API
+        const res   = await fetch(`${import.meta.env.VITE_API_URL}/api/users/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (res.ok) setDbUser(await res.json())
+      } catch {
+        // network error — leave dbUser null; role gate will redirect
+      } finally {
+        setChecking(false)
+      }
+    })()
   }, [isLoaded, isSignedIn])
 
   if (!isLoaded || checking) return <Spinner />
   if (!isSignedIn) return <Navigate to="/sign-in" replace />
 
-  // Role gate
+  // Role gate — only applied when allowedRoles is specified
   if (allowedRoles && dbUser && !allowedRoles.includes(dbUser.role)) {
     return <Navigate to="/dashboard" replace />
   }
@@ -90,8 +101,8 @@ export default function App() {
       <Route path="/profile"    element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
 
       {/* College users only (student, coordinator, admin) */}
-      <Route path="/clubs"      element={<ProtectedRoute allowedRoles={['student','coordinator','admin']}><ClubsPage /></ProtectedRoute>} />
-      <Route path="/clubs/:id"  element={<ProtectedRoute allowedRoles={['student','coordinator','admin']}><ClubDetailPage /></ProtectedRoute>} />
+      <Route path="/clubs"     element={<ProtectedRoute allowedRoles={['student','coordinator','admin']}><ClubsPage /></ProtectedRoute>} />
+      <Route path="/clubs/:id" element={<ProtectedRoute allowedRoles={['student','coordinator','admin']}><ClubDetailPage /></ProtectedRoute>} />
 
       {/* Coordinator + Admin */}
       <Route path="/coordinator" element={<ProtectedRoute allowedRoles={['coordinator','admin']}><CoordinatorPage /></ProtectedRoute>} />

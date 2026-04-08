@@ -1,7 +1,7 @@
 require('dotenv').config()
-const express   = require('express')
-const cors      = require('cors')
-const helmet    = require('helmet')
+const express = require('express')
+const cors = require('cors')
+const helmet = require('helmet')
 const rateLimit = require('express-rate-limit')
 
 const app = express()
@@ -9,20 +9,21 @@ const app = express()
 // ── Security & parsing ─────────────────────────────────────────
 app.use(helmet())
 app.use(cors({
-  origin:      process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
 }))
+app.use('/api/webhooks/clerk', require('./routes/clerkWebhook'))
 app.use(express.json())
 app.use(rateLimit({ windowMs: 15 * 60 * 1000, max: 300 }))
 
 // ── Routes ─────────────────────────────────────────────────────
-app.use('/api/users',         require('./routes/users'))
-app.use('/api/events',        require('./routes/events'))
+app.use('/api/users', require('./routes/users'))
+app.use('/api/events', require('./routes/events'))
 app.use('/api/registrations', require('./routes/registrations'))
-app.use('/api/clubs',         require('./routes/clubs'))
-app.use('/api/results',       require('./routes/results'))
-app.use('/api/admin',         require('./routes/admin'))
-app.use('/api/coordinator',   require('./routes/coordinator'))
+app.use('/api/clubs', require('./routes/clubs'))
+app.use('/api/results', require('./routes/results'))
+app.use('/api/admin', require('./routes/admin'))
+app.use('/api/coordinator', require('./routes/coordinator'))
 
 // ── Health check ───────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok' }))

@@ -2,12 +2,23 @@ import { useAuth } from '@clerk/clerk-react'
 
 const BASE = import.meta.env.VITE_API_URL
 
+function buildUrl(path) {
+  const base = (BASE || '').replace(/\/$/, '')
+
+  // If base already ends with /api, avoid generating /api/api/... URLs.
+  if (base.endsWith('/api') && path.startsWith('/api/')) {
+    return `${base}${path.slice(4)}`
+  }
+
+  return `${base}${path}`
+}
+
 export function useApi() {
   const { getToken } = useAuth()
 
   const request = async (path, options = {}) => {
     const token = await getToken()
-    const res = await fetch(`${BASE}${path}`, {
+    const res = await fetch(buildUrl(path), {
       ...options,
       headers: {
         'Content-Type': 'application/json',

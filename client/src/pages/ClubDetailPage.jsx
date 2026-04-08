@@ -228,37 +228,21 @@ const _css = `
 .club-banner__cat {
   position: absolute;
   top: 20px; right: 20px;
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 11px; font-weight: 600;
   color: rgba(255,255,255,0.85);
   background: rgba(255,255,255,0.12);
   border: 1px solid rgba(255,255,255,0.2);
   backdrop-filter: blur(10px);
-  padding: 4px 12px;
-  border-radius: 99px;
+  padding: 4px 12px; border-radius: 99px;
 }
 .club-banner__info { position: relative; z-index: 1; }
 .club-banner__name {
   font-family: 'Syne', sans-serif;
-  font-weight: 800;
-  font-size: 40px;
-  color: #fff;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-  margin-bottom: 4px;
+  font-weight: 800; font-size: 40px;
+  color: #fff; letter-spacing: -0.02em;
+  line-height: 1.1; margin-bottom: 4px;
 }
 .club-banner__est { font-size: 13px; color: rgba(255,255,255,0.65); }
-.achievement-list { display: flex; flex-direction: column; gap: 8px; }
-.achievement-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  background: var(--surface);
-  border-radius: 12px;
-  font-size: 13.5px;
-  color: var(--text);
-}
 .cards-grid-2 {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -277,25 +261,17 @@ const _css = `
 }
 .club-stat-mini__value {
   font-family: 'Syne', sans-serif;
-  font-weight: 700;
-  font-size: 26px;
+  font-weight: 700; font-size: 26px;
   color: #7C74FF;
 }
 .club-stat-mini__label { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 .coord-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 10px;
+  display: flex; align-items: center; gap: 12px; margin-top: 10px;
 }
 .coord-card__avatar {
-  width: 40px; height: 40px;
-  border-radius: 50%;
+  width: 40px; height: 40px; border-radius: 50%;
   background: rgba(108,99,255,0.15);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
 }
 .coord-card__name { font-size: 14px; font-weight: 600; color: var(--text); }
 .coord-card__email { font-size: 11px; color: var(--text-muted); margin-top: 2px; }

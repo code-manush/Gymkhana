@@ -1,8 +1,3 @@
-CREATE DATABASE IF NOT EXISTS gymkhana_db;
-USE gymkhana_db;
-
--- ── Users ─────────────────────────────────────────────────────────────────────
--- id comes from Clerk (string), not auto-increment
 CREATE TABLE IF NOT EXISTS users (
   id          VARCHAR(255) PRIMARY KEY,
   email       VARCHAR(255) NOT NULL UNIQUE,
@@ -52,9 +47,9 @@ CREATE TABLE IF NOT EXISTS events (
   category          ENUM('Technical','Cultural','Sports','Literary') NOT NULL,
   status            ENUM('upcoming','registration_open','ongoing','completed') NOT NULL DEFAULT 'upcoming',
   visitor_open      TINYINT(1) NOT NULL DEFAULT 0,
-  team_size         VARCHAR(50),          -- e.g. "2–4 members"
-  prizes            JSON,                 -- array of prize strings
-  schedule          JSON,                 -- array of {time, event} objects
+  team_size         VARCHAR(50),
+  prizes            JSON,
+  schedule          JSON,
   created_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
   updated_at        TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE SET NULL

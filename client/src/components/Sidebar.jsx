@@ -1,27 +1,36 @@
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useUser, UserButton } from '@clerk/clerk-react'
 import {
   LayoutDashboard, Calendar, Users, Trophy, User,
   Settings, ShieldCheck, Zap,
 } from 'lucide-react'
+import { useApi } from '../lib/api'
 
 const navItems = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { to: '/events',    icon: Calendar,         label: 'Events' },
-  { to: '/clubs',     icon: Users,            label: 'Clubs' },
-  { to: '/results',   icon: Trophy,           label: 'Results' },
-  { to: '/profile',   icon: User,             label: 'Profile' },
-]
-
-const adminItems = [
-  { to: '/admin',       icon: ShieldCheck, label: 'Admin Panel' },
-  { to: '/coordinator', icon: Settings,    label: 'Coordinator' },
+  { to: '/events',    icon: Calendar,         label: 'Events'    },
+  { to: '/clubs',     icon: Users,            label: 'Clubs'     },
+  { to: '/results',   icon: Trophy,           label: 'Results'   },
+  { to: '/profile',   icon: User,             label: 'Profile'   },
 ]
 
 export default function Sidebar() {
   const location = useLocation()
   const { user } = useUser()
+  const api = useApi()
+  const [dbRole, setDbRole] = useState(null)
+
   const isActive = (path) => location.pathname === path
+
+  useEffect(() => {
+    api.get('/api/users/me')
+      .then(u => setDbRole(u.role))
+      .catch(() => setDbRole('student'))
+  }, [])
+
+  const isAdmin       = dbRole === 'admin'
+  const isCoordinator = dbRole === 'coordinator' || dbRole === 'admin'
 
   return (
     <aside className="sidebar">
@@ -52,18 +61,47 @@ export default function Sidebar() {
           </Link>
         ))}
 
-        <p className="sidebar__section-label" style={{ marginTop: 28 }}>Management</p>
-        {adminItems.map(({ to, icon: Icon, label }) => (
-          <Link
-            key={to}
-            to={to}
-            className={`sidebar__link${isActive(to) ? ' sidebar__link--active' : ''}`}
-          >
-            <Icon size={17} />
-            {label}
-          </Link>
-        ))}
+        {/* Management section — only for coordinators and admins */}
+        {isCoordinator && (
+          <>
+            <p className="sidebar__section-label" style={{ marginTop: 28 }}>Management</p>
+
+            {isAdmin && (
+              <Link
+                to="/admin"
+                className={`sidebar__link sidebar__link--admin${isActive('/admin') ? ' sidebar__link--active' : ''}`}
+              >
+                <ShieldCheck size={17} />
+                Admin Panel
+              </Link>
+            )}
+
+            <Link
+              to="/coordinator"
+              className={`sidebar__link sidebar__link--coord${isActive('/coordinator') ? ' sidebar__link--active' : ''}`}
+            >
+              <Settings size={17} />
+              Coordinator
+            </Link>
+          </>
+        )}
       </nav>
+
+      {/* Role badge */}
+      {dbRole && (
+        <div className="sidebar__role-badge">
+          <span
+            className="sidebar__role-pill"
+            style={{
+              color: dbRole === 'admin' ? '#FF6584' : dbRole === 'coordinator' ? '#F59E0B' : dbRole === 'visitor' ? '#4ECDC4' : '#7C74FF',
+              background: dbRole === 'admin' ? 'rgba(255,101,132,0.12)' : dbRole === 'coordinator' ? 'rgba(245,158,11,0.12)' : dbRole === 'visitor' ? 'rgba(78,205,196,0.12)' : 'rgba(108,99,255,0.12)',
+              border: `1px solid ${dbRole === 'admin' ? 'rgba(255,101,132,0.25)' : dbRole === 'coordinator' ? 'rgba(245,158,11,0.25)' : dbRole === 'visitor' ? 'rgba(78,205,196,0.25)' : 'rgba(108,99,255,0.25)'}`,
+            }}
+          >
+            {dbRole}
+          </span>
+        </div>
+      )}
 
       {/* User footer */}
       <div className="sidebar__user">
@@ -160,6 +198,27 @@ const _css = `
 }
 .sidebar__link--active:hover {
   background: rgba(108, 99, 255, 0.16);
+}
+.sidebar__link--admin:not(.sidebar__link--active):hover {
+  background: rgba(255,101,132,0.06);
+  color: #FF6584;
+}
+.sidebar__link--coord:not(.sidebar__link--active):hover {
+  background: rgba(245,158,11,0.06);
+  color: #F59E0B;
+}
+.sidebar__role-badge {
+  padding: 0 20px 12px;
+  text-align: center;
+}
+.sidebar__role-pill {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  padding: 4px 12px;
+  border-radius: 99px;
 }
 .sidebar__user {
   padding: 16px 20px;

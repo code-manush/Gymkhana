@@ -1,4 +1,5 @@
 const router = require('express').Router()
+const { clerkClient } = require('@clerk/clerk-sdk-node')
 const pool = require('../config/db')
 const { requireAuth, attachUser } = require('../middleware/auth')
 const { requireRole } = require('../middleware/roles')
@@ -8,12 +9,12 @@ const guard = [requireAuth, attachUser, requireRole('admin')]
 // ── Stats ─────────────────────────────────────────────────────
 router.get('/stats', ...guard, async (req, res, next) => {
   try {
-    const [[{ users }]]    = await pool.query('SELECT COUNT(*) AS users FROM users')
+    const [[{ users }]] = await pool.query('SELECT COUNT(*) AS users FROM users')
     const [[{ students }]] = await pool.query("SELECT COUNT(*) AS students FROM users WHERE role = 'student'")
     const [[{ visitors }]] = await pool.query("SELECT COUNT(*) AS visitors FROM users WHERE role = 'visitor'")
-    const [[{ events }]]   = await pool.query("SELECT COUNT(*) AS events FROM events WHERE status != 'completed'")
-    const [[{ pending }]]  = await pool.query("SELECT COUNT(*) AS pending FROM event_proposals WHERE status = 'pending'")
-    const [[{ clubs }]]    = await pool.query('SELECT COUNT(*) AS clubs FROM clubs WHERE is_active = 1')
+    const [[{ events }]] = await pool.query("SELECT COUNT(*) AS events FROM events WHERE status != 'completed'")
+    const [[{ pending }]] = await pool.query("SELECT COUNT(*) AS pending FROM event_proposals WHERE status = 'pending'")
+    const [[{ clubs }]] = await pool.query('SELECT COUNT(*) AS clubs FROM clubs WHERE is_active = 1')
     res.json({ users, students, visitors, events, pending, clubs })
   } catch (err) {
     next(err)
@@ -203,5 +204,74 @@ router.post(
     }
   }
 )
+
+// ── Force sync DB users with Clerk ───────────────────────────
+router.post('/sync-clerk-users', ...guard, async (req, res, next) => {
+  let conn
+
+  try {
+    const clerkUsers = []
+    const limit = 100
+    let offset = 0
+
+    while (true) {
+      const response = await clerkClient.users.getUserList({ limit, offset })
+      const batch = Array.isArray(response) ? response : (response?.data || [])
+
+      clerkUsers.push(...batch)
+
+      if (batch.length < limit) break
+      offset += limit
+    }
+
+    conn = await pool.getConnection()
+    await conn.beginTransaction()
+
+    for (const u of clerkUsers) {
+      const emails = Array.isArray(u.emailAddresses) ? u.emailAddresses : []
+      const primaryId = u.primaryEmailAddressId || null
+
+      const primary = primaryId
+        ? emails.find(e => e.id === primaryId)
+        : emails[0]
+
+      const email = primary?.emailAddress || emails[0]?.emailAddress || null
+      if (!u.id || !email) continue
+
+      let initialRole = 'student'
+      if (email === '202451019@iiitvadodara.ac.in') initialRole = 'admin'
+
+      await conn.query(
+        `INSERT INTO users (id, email, first_name, last_name, role)
+         VALUES (?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+           email      = VALUES(email),
+           first_name = VALUES(first_name),
+           last_name  = VALUES(last_name)`,
+        [u.id, email, u.firstName || '', u.lastName || '', initialRole]
+      )
+    }
+
+    const clerkIds = clerkUsers.map(u => u.id).filter(Boolean)
+
+    if (clerkIds.length) {
+      const placeholders = clerkIds.map(() => '?').join(',')
+      await conn.query(
+        `DELETE FROM users WHERE id NOT IN (${placeholders})`,
+        clerkIds
+      )
+    } else {
+      await conn.query('DELETE FROM users')
+    }
+
+    await conn.commit()
+    res.json({ success: true, clerkUsers: clerkIds.length })
+  } catch (err) {
+    if (conn) await conn.rollback()
+    next(err)
+  } finally {
+    if (conn) conn.release()
+  }
+})
 
 module.exports = router

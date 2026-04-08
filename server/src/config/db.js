@@ -1,6 +1,6 @@
 const mysql = require('mysql2/promise')
-const fs    = require('fs')
-const path  = require('path')
+const fs = require('fs')
+const path = require('path')
 require('dotenv').config()
 
 const pool = mysql.createPool({
@@ -11,16 +11,15 @@ const pool = mysql.createPool({
   database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
-  // ── Aiven requires SSL with their CA certificate ──────────────
+  // REQUIRED FOR AIVEN CLOUD MYSQL
   ssl: {
-    ca: fs.readFileSync(path.join(__dirname, 'ca.pem')),
-    rejectUnauthorized: true,
-  },
+    ca: fs.readFileSync(path.join(__dirname, 'ca.pem'))
+  }
 })
 
 pool.getConnection()
   .then(conn => {
-    console.log('✅ MySQL connected (SSL)')
+    console.log('✅ MySQL connected to Aiven')
     conn.release()
   })
   .catch(err => {

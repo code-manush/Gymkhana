@@ -4,6 +4,9 @@ const fs    = require('fs')
 const path  = require('path')
 
 async function migrate() {
+  const dbName = process.env.DB_NAME
+  if (!dbName) throw new Error('DB_NAME is missing in .env')
+
   // Connect without specifying the database first
   const conn = await mysql.createConnection({
     host:     process.env.DB_HOST,
@@ -12,6 +15,9 @@ async function migrate() {
     password: process.env.DB_PASSWORD,
     multipleStatements: true,   // needed to run the whole file at once
   })
+
+  await conn.query(`CREATE DATABASE IF NOT EXISTS \`${dbName}\``)
+  await conn.query(`USE \`${dbName}\``)
 
   const sql = fs.readFileSync(
     path.join(__dirname, 'schema.sql'),

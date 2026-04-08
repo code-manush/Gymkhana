@@ -5,30 +5,29 @@ const { requireAuth, attachUser } = require('../middleware/auth')
 /**
  * POST /api/users/sync
  * Called by the frontend immediately after every Clerk sign-in.
- *
- * Role assignment rules:
- *  - @iiitvadodara.ac.in  → student (or admin if it's the seed email)
- *  - any other email       → visitor
- *
- * The role column is NEVER reset on subsequent logins once set
- * (an admin manually promoting someone to coordinator stays coordinator).
+ * * New Rule: EVERYONE defaults to 'student'.
+ * The role is NEVER reset on subsequent logins once set 
+ * (so if an admin changes a student to coordinator, they stay coordinator).
  */
 router.post('/sync', requireAuth, async (req, res, next) => {
   try {
     const { userId } = req.auth
-    const { emailAddresses, firstName, lastName } = req.body
-    const email = emailAddresses?.[0]?.emailAddress
+    const { emailAddresses, primaryEmailAddress, email, firstName, lastName } = req.body
+    const resolvedEmail =
+      email ||
+      primaryEmailAddress?.emailAddress ||
+      emailAddresses?.[0]?.emailAddress ||
+      null
 
-    if (!email) return res.status(400).json({ error: 'Email is required' })
+    if (!resolvedEmail) return res.status(400).json({ error: 'Email is required' })
 
-    const isCollegeEmail = email.endsWith('@iiitvadodara.ac.in')
+    // Default EVERY new user to 'student'
+    let initialRole = 'student'
+    
+    // Developer Seed: Keep your account as admin automatically so you don't get locked out
+    if (resolvedEmail === '202451019@iiitvadodara.ac.in') initialRole = 'admin'
 
-    // Seed admin gets admin; other college emails start as student;
-    // everyone else is visitor.
-    let initialRole = isCollegeEmail ? 'student' : 'visitor'
-    if (email === '202451019@iiitvadodara.ac.in') initialRole = 'admin'
-
-    // INSERT or UPDATE — but never overwrite role (preserve manual promotions)
+    // INSERT or UPDATE — but never overwrite role (preserve admin's manual promotions)
     await pool.query(
       `INSERT INTO users (id, email, first_name, last_name, role)
        VALUES (?, ?, ?, ?, ?)
@@ -36,7 +35,7 @@ router.post('/sync', requireAuth, async (req, res, next) => {
          email      = VALUES(email),
          first_name = VALUES(first_name),
          last_name  = VALUES(last_name)`,
-      [userId, email, firstName || '', lastName || '', initialRole]
+      [userId, resolvedEmail, firstName || '', lastName || '', initialRole]
     )
 
     const [[user]] = await pool.query('SELECT * FROM users WHERE id = ?', [userId])

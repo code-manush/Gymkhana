@@ -38,7 +38,9 @@ router.get('/:id', requireAuth, async (req, res, next) => {
       `SELECT
         c.*,
         CONCAT(u.first_name, ' ', u.last_name) AS coordinator,
-        u.email AS coordinator_email
+        u.email AS coordinator_email,
+        (SELECT COUNT(*) FROM club_memberships m WHERE m.club_id = c.id) AS member_count,
+        (SELECT COUNT(*) FROM events e WHERE e.club_id = c.id) AS event_count
        FROM clubs c
        LEFT JOIN users u ON c.coordinator_id = u.id
        WHERE c.id = ?`,

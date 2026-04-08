@@ -75,7 +75,7 @@ export default function App() {
     ;(async () => {
       try {
         const token = await getToken()
-        await fetch(`${import.meta.env.VITE_API_URL}/api/users/sync`, {
+        await fetch(`${import.meta.env.VITE_API_URL}/users/sync`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
           body: JSON.stringify(user),

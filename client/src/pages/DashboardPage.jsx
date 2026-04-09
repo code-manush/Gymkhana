@@ -88,8 +88,8 @@ export default function DashboardPage() {
       <div className="stats-grid">
         <StatCard icon={Calendar} label="Upcoming Events" value={upcomingEvents.length.toString()} sub="Events available"   color="#7C74FF" delay={0.05} />
         <StatCard icon={CheckCircle2} label="My Registrations" value={myRegs.length.toString()} sub="Active"           color="#10B981" delay={0.10} />
-        <StatCard icon={Trophy}   label="Achievements"    value="5"  sub="This semester"  color="#F5C842" delay={0.15} />
-        <StatCard icon={Bell}     label="Notifications"   value="3"  sub="2 unread"       color="#4ECDC4" delay={0.20} />
+        <StatCard icon={Trophy}   label="Achievements"    value="0"  sub="This semester"  color="#F5C842" delay={0.15} />
+        <StatCard icon={Bell}     label="Notifications"   value="0"  sub="No notifications"       color="#4ECDC4" delay={0.20} />
       </div>
 
       {/* Mid grid */}

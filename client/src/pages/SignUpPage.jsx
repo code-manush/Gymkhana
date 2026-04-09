@@ -22,7 +22,7 @@ export default function SignUpPage() {
           </h2>
           <p className="auth-left__sub">Create your account with your IIITV institute email and unlock all Gymkhana features.</p>
           <div className="signup-stats-grid">
-            {[{ label: 'Events', value: '100+' }, { label: 'Clubs', value: '25+' }, { label: 'Students', value: '500+' }, { label: 'Uptime', value: '99.5%' }].map((s, i) => (
+            {[{ label: 'Events', value: '20+' }, { label: 'Clubs', value: '10+' }, { label: 'Students', value: '500+' }].map((s, i) => (
               <div key={i} className="signup-stat">
                 <p className="signup-stat__val">{s.value}</p>
                 <p className="signup-stat__label">{s.label}</p>

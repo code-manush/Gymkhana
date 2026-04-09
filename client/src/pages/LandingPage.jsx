@@ -60,10 +60,7 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="hero__scroll">
-          <p className="hero__scroll-text">Scroll to explore</p>
-          <div className="hero__scroll-line" />
-        </div>
+
       </section>
 
       {/* ── Stats ── */}

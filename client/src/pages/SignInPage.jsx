@@ -20,7 +20,7 @@ export function SignInPage() {
           <h2 className="auth-left__headline">Welcome<br />back.</h2>
           <p className="auth-left__sub">Sign in to access your events, clubs, and Gymkhana activities at IIITV.</p>
           <div className="auth-bullets">
-            {['500+ Active Students', '25+ Clubs', '100+ Events Annually'].map((item, i) => (
+            {['500+ Active Students', '10+ Clubs', '20+ Events Annually'].map((item, i) => (
               <div key={i} className="auth-bullet">
                 <div className="auth-bullet__dot" />
                 <p>{item}</p>

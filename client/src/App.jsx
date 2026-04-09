@@ -28,8 +28,6 @@ function Spinner() {
 }
 
 // ── Auth guard ─────────────────────────────────────────────────
-// FIX: Use getToken() from useAuth() — never rely on localStorage.__clerk_db_jwt
-// which is an internal Clerk key that is not guaranteed to exist.
 function ProtectedRoute({ children, allowedRoles }) {
   const { isSignedIn, isLoaded } = useAuth()
   const api = useApi()
@@ -39,7 +37,7 @@ function ProtectedRoute({ children, allowedRoles }) {
   useEffect(() => {
     if (!isLoaded || !isSignedIn) { setChecking(false); return }
 
-    ; (async () => {
+    const fetchUser = async () => {
       try {
         const user = await api.get('/api/users/me')
         setDbUser(user)
@@ -48,8 +46,10 @@ function ProtectedRoute({ children, allowedRoles }) {
       } finally {
         setChecking(false);
       }
-    })();
-  }, [isLoaded, isSignedIn, api])
+    };
+    
+    fetchUser();
+  }, [isLoaded, isSignedIn]) // FIX: Removed 'api' from dependency array
 
   if (!isLoaded || checking) return <Spinner />
   if (!isSignedIn) return <Navigate to="/sign-in" replace />
@@ -62,7 +62,6 @@ function ProtectedRoute({ children, allowedRoles }) {
   return children
 }
 
-
 // ── App ────────────────────────────────────────────────────────
 export default function App() {
   const { isSignedIn } = useAuth()
@@ -71,23 +70,12 @@ export default function App() {
 
   // Sync Clerk user into DB on every sign-in
   useEffect(() => {
-    if (!isSignedIn || !user) return
-      ; (async () => {
-        try {
-          const token = await getToken()
-          await fetch(`${import.meta.env.VITE_API_URL}/users/sync`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-            body: JSON.stringify(user),
-          })
-        } catch (err) {
-          console.error('User sync failed:', err.message)
-        }
-      })()
-  }, [isSignedIn])
-    ; (async () => {
+    if (!isSignedIn || !user) return;
+
+    const syncUser = async () => {
       try {
-        await api.post('/api/users/sync', {
+        // We added "const result =" right here to capture the output
+        const result = await api.post('/api/users/sync', {
           firstName: user.firstName || '',
           lastName: user.lastName || '',
           emailAddresses: [
@@ -99,38 +87,43 @@ export default function App() {
             },
           ],
         })
+        
+        // Now "result" actually exists!
+        console.log('✅ User successfully synced to MySQL!', result) 
       } catch (err) {
         console.error('User sync failed:', err.message)
       }
-    })()
-}, [isSignedIn, user, api])
+    };
 
-return (
-  <Routes>
-    {/* Public */}
-    <Route path="/" element={<LandingPage />} />
-    <Route path="/sign-in" element={<SignInPage />} />
-    <Route path="/sign-up" element={<SignUpPage />} />
+    syncUser();
+  }, [isSignedIn, user]) // FIX: Removed dangling code and cleaned up hook
 
-    {/* All authenticated users (including visitors) */}
-    <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-    <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
-    <Route path="/events/:id" element={<ProtectedRoute><EventDetailPage /></ProtectedRoute>} />
-    <Route path="/results" element={<ProtectedRoute><ResultsPage /></ProtectedRoute>} />
-    <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+  return (
+    <Routes>
+      {/* Public */}
+      <Route path="/" element={<LandingPage />} />
+      <Route path="/sign-in" element={<SignInPage />} />
+      <Route path="/sign-up" element={<SignUpPage />} />
 
-    {/* College users only (student, coordinator, admin) */}
-    <Route path="/clubs" element={<ProtectedRoute allowedRoles={['student', 'coordinator', 'admin']}><ClubsPage /></ProtectedRoute>} />
-    <Route path="/clubs/:id" element={<ProtectedRoute allowedRoles={['student', 'coordinator', 'admin']}><ClubDetailPage /></ProtectedRoute>} />
+      {/* All authenticated users (including visitors) */}
+      <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+      <Route path="/events" element={<ProtectedRoute><EventsPage /></ProtectedRoute>} />
+      <Route path="/events/:id" element={<ProtectedRoute><EventDetailPage /></ProtectedRoute>} />
+      <Route path="/results" element={<ProtectedRoute><ResultsPage /></ProtectedRoute>} />
+      <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
 
-    {/* Coordinator + Admin */}
-    <Route path="/coordinator" element={<ProtectedRoute allowedRoles={['coordinator', 'admin']}><CoordinatorPage /></ProtectedRoute>} />
+      {/* College users + Visitors allowed to view clubs */}
+      <Route path="/clubs" element={<ProtectedRoute allowedRoles={['student', 'coordinator', 'admin', 'visitor']}><ClubsPage /></ProtectedRoute>} />
+      <Route path="/clubs/:id" element={<ProtectedRoute allowedRoles={['student', 'coordinator', 'admin', 'visitor']}><ClubDetailPage /></ProtectedRoute>} />
 
-    {/* Admin only */}
-    <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminPage /></ProtectedRoute>} />
+      {/* Coordinator + Admin */}
+      <Route path="/coordinator" element={<ProtectedRoute allowedRoles={['coordinator', 'admin']}><CoordinatorPage /></ProtectedRoute>} />
 
-    {/* 404 */}
-    <Route path="*" element={<NotFoundPage />} />
-  </Routes>
-)
+      {/* Admin only */}
+      <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AdminPage /></ProtectedRoute>} />
+
+      {/* 404 */}
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
+  )
 }

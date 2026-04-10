@@ -63,4 +63,54 @@ router.get('/', requireAuth, attachUser, async (req, res, next) => {
   }
 })
 
+// GET /api/users/profile - Fetches user's clubs, events, and stats
+router.get('/profile', requireAuth, attachUser, async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+
+    // 1. Fetch Clubs they joined
+    const [clubs] = await pool.query(
+      `SELECT c.id, c.club_name AS name, 'Member' AS role 
+       FROM club_memberships cm
+       JOIN clubs c ON cm.club_id = c.id
+       WHERE cm.user_id = ?`,
+      [userId]
+    );
+
+    // 2. Fetch Events they registered for
+    const [registrations] = await pool.query(
+      `SELECT e.event_name AS label, 'Registration' AS type, r.registered_at AS date, r.status
+       FROM registrations r
+       JOIN events e ON r.event_id = e.id
+       WHERE r.user_id = ?
+       ORDER BY r.registered_at DESC LIMIT 10`,
+      [userId]
+    );
+
+    // 3. Fetch past Results/Wins
+    const [results] = await pool.query(
+      `SELECT e.event_name AS label, 'Result' AS type, r.created_at AS date, 
+              CONCAT(r.position, ' Place') AS status 
+       FROM results r
+       JOIN events e ON r.event_id = e.id
+       WHERE r.user_id = ?
+       ORDER BY r.created_at DESC LIMIT 10`,
+      [userId]
+    );
+
+    // Combine activity and calculate basic stats
+    const activity = [...registrations, ...results].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const stats = {
+      events: registrations.length,
+      clubs: clubs.length,
+      wins: results.length,
+      points: results.length * 50 + registrations.length * 10 // Gamification!
+    };
+
+    res.json({ clubs, activity, stats, dbUser: req.user });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router

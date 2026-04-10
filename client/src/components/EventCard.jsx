@@ -11,14 +11,14 @@ const statusConfig = {
 export default function EventCard({ event }) {
   const {
     id = 1,
-    eventName = 'Hackathon 2025',
+    event_name: eventName = 'Hackathon 2025',
     description = 'Annual coding competition',
-    eventDate = '2025-03-15',
+    event_date: eventDate = '2025-03-15',
     location = 'Main Auditorium',
     capacity = 200,
     registered = 120,
     status = 'upcoming',
-    club = 'Tech Club',
+    club_name: club = 'Tech Club',
     category = 'Technical',
   } = event || {}
 

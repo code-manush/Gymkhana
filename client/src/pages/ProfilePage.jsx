@@ -1,23 +1,43 @@
 // ─── ProfilePage.jsx ───────────────────────────────────────────────────────
+import { useEffect, useState } from 'react'
 import { UserProfile, useUser } from '@clerk/clerk-react'
-import { Trophy, Calendar, Users, Star } from 'lucide-react'
+import { Trophy, Calendar, Users, Star, ArrowRight } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import DashboardLayout from '../components/DashboardLayout'
+import { useApi } from '../lib/api'
 
-const myActivity = [
-  { label: 'Hackathon 2025',      type: 'Registration', date: 'Apr 10, 2025', status: 'Confirmed', color: '#10B981' },
-  { label: 'Photography Contest', type: 'Registration', date: 'Mar 28, 2025', status: 'Pending',   color: '#F59E0B' },
-  { label: 'Quiz Championship',   type: 'Participated', date: 'Mar 10, 2025', status: '2nd Place', color: '#7C74FF' },
-  { label: 'Badminton Tournament',type: 'Participated', date: 'Mar 15, 2025', status: 'Completed', color: '#6B6B8A' },
-]
-
-export function ProfilePage() {
+export default function ProfilePage() {
   const { user } = useUser()
+  const api = useApi()
+  
+  const [profileData, setProfileData] = useState({ clubs: [], activity: [], stats: {}, dbUser: null })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    api.get('/api/users/profile')
+      .then(data => setProfileData(data))
+      .catch(err => console.error('Failed to fetch profile:', err))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const { clubs, activity, stats, dbUser } = profileData
+
+  // Helper to color-code statuses
+  const getStatusColor = (status) => {
+    if (!status) return '#6B6B8A'
+    if (status.toLowerCase() === 'confirmed') return '#10B981' // Green
+    if (status.toLowerCase() === 'waitlisted' || status.toLowerCase() === 'pending') return '#F59E0B' // Orange
+    if (status.includes('Place')) return '#F5C842' // Gold for wins
+    return '#7C74FF' // Purple default
+  }
+
   return (
     <DashboardLayout>
       <div className="page-header">
         <h1 className="page-header__title">My Profile</h1>
         <p className="page-header__sub">Manage your account and view your Gymkhana activity.</p>
       </div>
+
       <div className="profile-grid">
         <div className="profile-left">
           {/* Summary */}
@@ -33,20 +53,23 @@ export function ProfilePage() {
               <div>
                 <p className="profile-name">{user?.fullName || 'Student'}</p>
                 <p className="profile-email">{user?.primaryEmailAddress?.emailAddress}</p>
-                <span className="role-badge role-badge--coord" style={{ marginTop: 6, display: 'inline-block' }}>Student</span>
+                <span className="role-badge role-badge--coord" style={{ marginTop: 6, display: 'inline-block' }}>
+                  {dbUser?.role ? dbUser.role.charAt(0).toUpperCase() + dbUser.role.slice(1) : 'Student'}
+                </span>
               </div>
             </div>
+
             <div className="profile-stats">
               {[
-                { icon: Calendar, label: 'Events', value: '4', color: '#7C74FF' },
-                { icon: Users,    label: 'Clubs',  value: '3', color: '#FF6584' },
-                { icon: Trophy,   label: 'Wins',   value: '1', color: '#F5C842' },
-                { icon: Star,     label: 'Points', value: '245', color: '#4ECDC4' },
+                { icon: Calendar, label: 'Events', value: stats.events ?? '-', color: '#7C74FF' },
+                { icon: Users,    label: 'Clubs',  value: stats.clubs ?? '-',  color: '#FF6584' },
+                { icon: Trophy,   label: 'Wins',   value: stats.wins ?? '-',   color: '#F5C842' },
+                { icon: Star,     label: 'Points', value: stats.points ?? '-', color: '#4ECDC4' },
               ].map((s, i) => (
                 <div key={i} className="profile-stat">
                   <s.icon size={13} style={{ color: s.color }} />
                   <div>
-                    <p className="profile-stat__val" style={{ color: s.color }}>{s.value}</p>
+                    <p className="profile-stat__val" style={{ color: s.color }}>{loading ? '...' : s.value}</p>
                     <p className="profile-stat__label">{s.label}</p>
                   </div>
                 </div>
@@ -54,42 +77,50 @@ export function ProfilePage() {
             </div>
           </div>
 
-          {/* Activity */}
+          {/* Activity Log */}
           <div className="glass-card">
             <p className="glass-card__title" style={{ marginBottom: 16 }}>Recent Activity</p>
-            <div className="item-list">
-              {myActivity.map((a, i) => (
-                <div key={i} className="item-row">
-                  <div className="item-row__dot" style={{ background: a.color }} />
-                  <div className="item-row__body">
-                    <p className="item-row__name">{a.label}</p>
-                    <p className="item-row__sub">{a.type} · {a.date}</p>
-                  </div>
-                  <span className="item-row__badge" style={{ color: a.color, background: `${a.color}18` }}>{a.status}</span>
-                </div>
-              ))}
-            </div>
+            {loading ? <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Loading...</p> : activity.length === 0 ? (
+              <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>No recent activity. <Link to="/events" style={{ color: '#7C74FF' }}>Find an event →</Link></p>
+            ) : (
+              <div className="item-list">
+                {activity.map((a, i) => {
+                  const color = getStatusColor(a.status)
+                  return (
+                    <div key={i} className="item-row">
+                      <div className="item-row__dot" style={{ background: color }} />
+                      <div className="item-row__body">
+                        <p className="item-row__name">{a.label}</p>
+                        <p className="item-row__sub">{a.type} · {new Date(a.date).toLocaleDateString('en-IN', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                      </div>
+                      <span className="item-row__badge" style={{ color: color, background: `${color}18` }}>{a.status}</span>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
           </div>
 
-          {/* Clubs */}
+          {/* My Clubs */}
           <div className="glass-card">
             <p className="glass-card__title" style={{ marginBottom: 14 }}>My Clubs</p>
-            <div className="item-list">
-              {[
-                { name: 'Technical Club', role: 'Member', color: '#7C74FF' },
-                { name: 'Literary Club',  role: 'Member', color: '#F5C842' },
-                { name: 'Sports Club',    role: 'Member', color: '#10B981' },
-              ].map((c, i) => (
-                <div key={i} className="item-row">
-                  <div className="item-row__dot" style={{ background: c.color }} />
-                  <p className="item-row__name" style={{ flex: 1 }}>{c.name}</p>
-                  <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.role}</span>
-                </div>
-              ))}
-            </div>
+            {loading ? <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>Loading...</p> : clubs.length === 0 ? (
+               <p style={{ fontSize: 13, color: 'var(--text-muted)' }}>You haven't joined any clubs. <Link to="/clubs" style={{ color: '#7C74FF' }}>Browse clubs →</Link></p>
+            ) : (
+              <div className="item-list">
+                {clubs.map((c, i) => (
+                  <div key={i} className="item-row">
+                    <div className="item-row__dot" style={{ background: '#7C74FF' }} />
+                    <p className="item-row__name" style={{ flex: 1 }}>{c.name}</p>
+                    <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{c.role}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
+        {/* Clerk Profile Manager */}
         <div className="profile-right">
           <UserProfile
             appearance={{
@@ -100,10 +131,7 @@ export function ProfilePage() {
                 colorNeutral: '#1A1A30', borderRadius: '16px',
                 fontFamily: 'DM Sans, sans-serif',
               },
-              elements: {
-                card: 'shadow-none',
-                navbar: 'border-r-0',
-              },
+              elements: { card: 'shadow-none', navbar: 'border-r-0' },
             }}
           />
         </div>
@@ -159,5 +187,3 @@ const _profileCss = `
   .profile-grid { grid-template-columns: 1fr; }
 }
 `
-
-export default ProfilePage

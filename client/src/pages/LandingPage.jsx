@@ -5,17 +5,17 @@ import { ArrowRight, Zap, Trophy, Users, Calendar, Star, Shield } from 'lucide-r
 import Navbar from '../components/Navbar'
 
 const features = [
-  { icon: Calendar, title: 'Event Management',  desc: 'Browse, register, and participate in all Gymkhana events seamlessly.', color: '#7C74FF' },
-  { icon: Users,    title: 'Club Discovery',    desc: 'Explore technical, cultural, and sports clubs. Find your community.',  color: '#FF6584' },
-  { icon: Trophy,   title: 'Live Results',      desc: 'Real-time leaderboards and result publication for all competitions.',   color: '#F5C842' },
-  { icon: Shield,   title: 'Role-Based Access', desc: 'Secure platform with distinct views for students, coordinators, and admins.', color: '#4ECDC4' },
-  { icon: Star,     title: 'Media Gallery Archive',     desc: 'Relive memories through an organized archive of event photos.',         color: '#FF6B6B' },
+  { icon: Calendar, title: 'Event Management',    desc: 'Browse, register, and participate in all Gymkhana events seamlessly.',          color: '#7C74FF' },
+  { icon: Users,    title: 'Club Discovery',      desc: 'Explore technical, cultural, and sports clubs. Find your community.',            color: '#FF6584' },
+  { icon: Trophy,   title: 'Live Results',        desc: 'Real-time leaderboards and result publication for all competitions.',             color: '#F5C842' },
+  { icon: Shield,   title: 'Role-Based Access',   desc: 'Secure platform with distinct views for students, coordinators, and admins.',     color: '#4ECDC4' },
+  { icon: Star,     title: 'Media Gallery Archive', desc: 'Relive memories through an organized archive of event photos.',               color: '#FF6B6B' },
 ]
 
 const stats = [
-  { value: '10+',   label: 'Active Clubs' },
-  { value: '500+',  label: 'Students' },
-  { value: '20+',  label: 'Events/Year' },
+  { value: '10+',  label: 'Active Clubs'  },
+  { value: '500+', label: 'Students'      },
+  { value: '20+',  label: 'Events / Year' },
 ]
 
 export default function LandingPage() {
@@ -26,7 +26,6 @@ export default function LandingPage() {
     <div className="landing">
       <Navbar />
 
-      {/* ── Hero ── */}
       <section className="hero">
         <div className="hero__bg">
           <div className="hero__orb hero__orb--1" />
@@ -59,11 +58,8 @@ export default function LandingPage() {
             </Link>
           </div>
         </div>
-
-
       </section>
 
-      {/* ── Stats ── */}
       <section className="landing-stats">
         <div className="landing__container">
           <div className="landing-stats__grid">
@@ -77,7 +73,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Features ── */}
       <section className="landing-features">
         <div className="landing__container">
           <div className="landing-features__head">
@@ -88,10 +83,7 @@ export default function LandingPage() {
           <div className="landing-features__grid">
             {features.map((f, i) => (
               <div key={i} className="feature-card">
-                <div
-                  className="feature-card__icon"
-                  style={{ background: `${f.color}15`, border: `1px solid ${f.color}22` }}
-                >
+                <div className="feature-card__icon" style={{ background: `${f.color}15`, border: `1px solid ${f.color}22` }}>
                   <f.icon size={20} style={{ color: f.color }} />
                 </div>
                 <h3 className="feature-card__title">{f.title}</h3>
@@ -102,7 +94,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CTA ── */}
       <section className="landing-cta">
         <div className="landing__container">
           <div className="landing-cta__card">
@@ -115,7 +106,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Footer ── */}
       <footer className="landing-footer">
         <div className="landing__container landing-footer__inner">
           <div className="landing-footer__brand">

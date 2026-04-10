@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
-import { ArrowLeft, Users, Mail, CheckCircle2, Trophy, Loader } from 'lucide-react'
+import { ArrowLeft, Users, Mail, CheckCircle2, Loader } from 'lucide-react'
 import DashboardLayout from '../components/DashboardLayout'
 import EventCard from '../components/EventCard'
-import { useApi } from '../lib/api' // <-- 1. Import your API hook
+import { useApi } from '../lib/api'
 
 const bannerGradients = {
   Technical: 'linear-gradient(135deg, #6C63FF 0%, #8B5CF6 100%)',
@@ -14,32 +14,27 @@ const bannerGradients = {
 
 export default function ClubDetailPage() {
   const { id } = useParams()
-  const api = useApi() // <-- 2. Initialize API
+  const api = useApi()
 
-  // 3. Set up states for data and loading
-  const [club, setClub]         = useState(null)
-  const [loading, setLoading]   = useState(true)
-  
-  // 4. Set up states for the Join Button interactive logic
-  const [joining, setJoining]   = useState(false)
-  const [joined, setJoined]     = useState(false)
-  const [joinMsg, setJoinMsg]   = useState('')
+  const [club, setClub]       = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [joining, setJoining] = useState(false)
+  const [joined, setJoined]   = useState(false)
+  const [joinMsg, setJoinMsg] = useState('')
 
-  // 5. Fetch the club data when the page loads
   useEffect(() => {
-    // Make sure we use /clubs and not /api/clubs to avoid double /api/api
-    api.get(`/clubs/${id}`)
+    // Fixed: use /api/clubs/:id (the buildUrl helper handles deduplication)
+    api.get(`/api/clubs/${id}`)
       .then(data => setClub(data))
       .catch(err => console.error(err))
       .finally(() => setLoading(false))
   }, [id])
 
-  // 6. Handle the Join Button click
   async function handleJoin() {
     setJoining(true)
     setJoinMsg('')
     try {
-      await api.post(`/clubs/${id}/join`)
+      await api.post(`/api/clubs/${id}/join`)
       setJoined(true)
       setJoinMsg('You joined the club!')
     } catch (err) {
@@ -53,21 +48,19 @@ export default function ClubDetailPage() {
     setJoining(false)
   }
 
-  // 7. Normalize events from DB (snake_case) to UI (camelCase)
   const normalizeEvent = (e) => ({
     id:          e.id,
-    eventName:   e.event_name,
+    event_name:  e.event_name,
     description: e.description,
-    eventDate:   e.event_date,
+    event_date:  e.event_date,
     location:    e.location,
     capacity:    e.capacity,
     registered:  e.registered || 0,
     status:      e.status,
-    club:        club?.club_name,
+    club_name:   club?.club_name,
     category:    e.category,
   })
 
-  // Show a loading spinner while fetching
   if (loading) {
     return (
       <DashboardLayout>
@@ -79,7 +72,6 @@ export default function ClubDetailPage() {
     )
   }
 
-  // Show error if club doesn't exist
   if (!club) {
     return (
       <DashboardLayout>
@@ -96,7 +88,6 @@ export default function ClubDetailPage() {
     <DashboardLayout>
       <Link to="/clubs" className="back-link"><ArrowLeft size={15} /> Back to Clubs</Link>
 
-      {/* Banner */}
       <div
         className="club-banner"
         style={{ background: bannerGradients[club.category] || bannerGradients.Technical }}
@@ -110,7 +101,6 @@ export default function ClubDetailPage() {
       </div>
 
       <div className="detail-grid">
-        {/* Main */}
         <div className="detail-main">
           <div className="glass-card">
             <h2 className="section-heading">About</h2>
@@ -134,7 +124,6 @@ export default function ClubDetailPage() {
           )}
         </div>
 
-        {/* Sidebar */}
         <div className="detail-sidebar">
           <div className="glass-card">
             <div className="club-stats-mini">

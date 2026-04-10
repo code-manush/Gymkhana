@@ -1,8 +1,7 @@
-// ─── NotFoundPage.jsx ──────────────────────────────────────────────────────
 import { Link } from 'react-router-dom'
 import { ArrowLeft, Zap } from 'lucide-react'
 
-export function NotFoundPage() {
+export default function NotFoundPage() {
   return (
     <div className="notfound">
       <div className="notfound__orb" />
@@ -97,5 +96,3 @@ const _nfCss = `
   flex-wrap: wrap;
 }
 `
-
-export default NotFoundPage

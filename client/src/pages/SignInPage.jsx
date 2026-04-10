@@ -1,12 +1,10 @@
-// ─── SignInPage.jsx ─────────────────────────────────────────────────────────
 import { SignIn } from '@clerk/clerk-react'
 import { Link } from 'react-router-dom'
 import { Zap } from 'lucide-react'
 
-export function SignInPage() {
+export default function SignInPage() {
   return (
     <div className="auth-page">
-      {/* Left panel */}
       <div className="auth-left">
         <div className="auth-left__orb auth-left__orb--1" />
         <div className="auth-left__orb auth-left__orb--2" />
@@ -32,7 +30,6 @@ export function SignInPage() {
         <p className="auth-left__footer">© 2025 Gymkhana IIITV — Group 28</p>
       </div>
 
-      {/* Right panel */}
       <div className="auth-right">
         <Link to="/" className="auth-brand auth-brand--mobile">
           <div className="auth-brand__icon"><Zap size={16} color="#fff" /></div>
@@ -163,5 +160,3 @@ const _authCss = `
 .auth-link { color: #7C74FF; text-decoration: none; }
 .auth-link:hover { text-decoration: underline; }
 `
-
-export default SignInPage

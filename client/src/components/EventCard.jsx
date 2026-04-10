@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Calendar, MapPin, Users, ArrowRight } from 'lucide-react'
+import { Calendar, MapPin, Users, ArrowRight, Eye } from 'lucide-react'
 
 const statusConfig = {
   upcoming:          { label: 'Upcoming',          color: '#10B981', bg: 'rgba(16,185,129,0.1)',  border: 'rgba(16,185,129,0.2)'  },
@@ -8,19 +8,29 @@ const statusConfig = {
   registration_open: { label: 'Registration Open', color: '#7C74FF', bg: 'rgba(108,99,255,0.1)',  border: 'rgba(108,99,255,0.2)'  },
 }
 
-export default function EventCard({ event }) {
+export default function EventCard({ event, showVisitorBadge }) {
   const {
     id = 1,
-    event_name: eventName = 'Hackathon 2025',
+    // Support both snake_case (from API) and camelCase (from normalization)
+    event_name,
+    eventName,
     description = 'Annual coding competition',
-    event_date: eventDate = '2025-03-15',
+    event_date,
+    eventDate,
     location = 'Main Auditorium',
     capacity = 200,
     registered = 120,
     status = 'upcoming',
-    club_name: club = 'Tech Club',
+    club_name,
+    clubName,
     category = 'Technical',
+    visitor_open,
   } = event || {}
+
+  const displayName = event_name || eventName || 'Hackathon 2025'
+  const displayDate = event_date || eventDate || '2025-03-15'
+  const displayClub = club_name || clubName || ''
+  const isVisitorOpen = showVisitorBadge || visitor_open
 
   const cfg = statusConfig[status] || statusConfig.upcoming
   const fillPct = Math.round((registered / capacity) * 100)
@@ -31,7 +41,7 @@ export default function EventCard({ event }) {
   return (
     <div className="event-card">
       <div className="event-card__header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
           <span
             className="event-card__badge"
             style={{ color: cfg.color, background: cfg.bg, border: `1px solid ${cfg.border}` }}
@@ -39,9 +49,14 @@ export default function EventCard({ event }) {
             {cfg.label}
           </span>
           <span className="event-card__category">{category}</span>
+          {isVisitorOpen && (
+            <span style={{ fontSize: 10, color: '#4ECDC4', display: 'flex', alignItems: 'center', gap: 3 }}>
+              <Eye size={10} /> Visitor Open
+            </span>
+          )}
         </div>
-        <h3 className="event-card__title">{eventName}</h3>
-        <p className="event-card__club">{club}</p>
+        <h3 className="event-card__title">{displayName}</h3>
+        {displayClub && <p className="event-card__club">{displayClub}</p>}
       </div>
 
       <p className="event-card__desc">{description}</p>
@@ -49,7 +64,7 @@ export default function EventCard({ event }) {
       <div className="event-card__meta">
         <div className="event-card__meta-row">
           <Calendar size={13} color="#7C74FF" />
-          <span>{new Date(eventDate).toLocaleDateString('en-IN', { dateStyle: 'medium' })}</span>
+          <span>{new Date(displayDate).toLocaleDateString('en-IN', { dateStyle: 'medium' })}</span>
         </div>
         <div className="event-card__meta-row">
           <MapPin size={13} color="#7C74FF" />

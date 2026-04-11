@@ -4,22 +4,24 @@ import { ArrowLeft, Users, Mail, CheckCircle2, Loader } from 'lucide-react'
 import DashboardLayout from '../components/DashboardLayout'
 import EventCard from '../components/EventCard'
 import { useApi } from '../lib/api'
+import { useUserRole } from '../context/UserContext'
 
 const bannerGradients = {
   Technical: 'linear-gradient(135deg, #6C63FF 0%, #8B5CF6 100%)',
-  Cultural:  'linear-gradient(135deg, #FF6584 0%, #E11D48 100%)',
-  Sports:    'linear-gradient(135deg, #10B981 0%, #059669 100%)',
-  Literary:  'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
+  Cultural: 'linear-gradient(135deg, #FF6584 0%, #E11D48 100%)',
+  Sports: 'linear-gradient(135deg, #10B981 0%, #059669 100%)',
+  Literary: 'linear-gradient(135deg, #F59E0B 0%, #D97706 100%)',
 }
 
 export default function ClubDetailPage() {
   const { id } = useParams()
   const api = useApi()
+  const { isVisitor } = useUserRole() || {}
 
-  const [club, setClub]       = useState(null)
+  const [club, setClub] = useState(null)
   const [loading, setLoading] = useState(true)
   const [joining, setJoining] = useState(false)
-  const [joined, setJoined]   = useState(false)
+  const [joined, setJoined] = useState(false)
   const [joinMsg, setJoinMsg] = useState('')
 
   useEffect(() => {
@@ -30,7 +32,13 @@ export default function ClubDetailPage() {
       .finally(() => setLoading(false))
   }, [id])
 
+
   async function handleJoin() {
+    if (isVisitor) {
+      setJoinMsg('Visitors cannot join clubs. Please contact the coordinator for more info.')
+      return
+    }
+
     setJoining(true)
     setJoinMsg('')
     try {
@@ -41,7 +49,11 @@ export default function ClubDetailPage() {
       if (err.message.includes('Already')) {
         setJoined(true)
         setJoinMsg('You are already a member.')
-      } else {
+      }
+      else if (isVisitor) {
+        setJoinMsg('Visitors cannot join clubs. Please contact the coordinator for more info.')
+      }
+      else {
         setJoinMsg('Failed to join club.')
       }
     }
@@ -49,16 +61,16 @@ export default function ClubDetailPage() {
   }
 
   const normalizeEvent = (e) => ({
-    id:          e.id,
-    event_name:  e.event_name,
+    id: e.id,
+    event_name: e.event_name,
     description: e.description,
-    event_date:  e.event_date,
-    location:    e.location,
-    capacity:    e.capacity,
-    registered:  e.registered || 0,
-    status:      e.status,
-    club_name:   club?.club_name,
-    category:    e.category,
+    event_date: e.event_date,
+    location: e.location,
+    capacity: e.capacity,
+    registered: e.registered || 0,
+    status: e.status,
+    club_name: club?.club_name,
+    category: e.category,
   })
 
   if (loading) {
@@ -143,6 +155,12 @@ export default function ClubDetailPage() {
               </p>
             )}
 
+            {isVisitor && !joinMsg && (
+              <p style={{ fontSize: 12, color: '#4ECDC4', textAlign: 'center', marginTop: 12 }}>
+                Visitors can view clubs but cannot join them.
+              </p>
+            )}
+
             {joined ? (
               <div style={{ marginTop: 14 }}>
                 <div className="reg-success" style={{ padding: '12px 0 8px' }}>
@@ -153,11 +171,11 @@ export default function ClubDetailPage() {
             ) : (
               <button
                 onClick={handleJoin}
-                disabled={joining}
+                disabled={joining || isVisitor}
                 className="btn-primary"
                 style={{ width: '100%', justifyContent: 'center', marginTop: 16 }}
               >
-                {joining ? 'Joining…' : 'Join Club'}
+                {isVisitor ? 'Visitors Cannot Join' : joining ? 'Joining…' : 'Join Club'}
               </button>
             )}
           </div>

@@ -26,8 +26,6 @@ app.use('/api/clubs', require('./routes/clubs'))
 app.use('/api/results', require('./routes/results'))
 app.use('/api/admin', require('./routes/admin'))
 app.use('/api/coordinator', require('./routes/coordinator'))
-app.use('/api/admin', adminRoutes)
-app.use('/api/results', resultsRoutes)
 
 // ── Health check ───────────────────────────────────────────────
 app.get('/health', (req, res) => res.json({ status: 'ok' }))

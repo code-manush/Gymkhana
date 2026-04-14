@@ -1,0 +1,339 @@
+\documentclass[12pt, a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{float}
+
+\geometry{a4paper, margin=1in}
+\onehalfspacing
+
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.58,0,0.82}
+\definecolor{backcolour}{rgb}{0.95,0.95,0.92}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\ttfamily\footnotesize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+\lstset{style=mystyle}
+\setlength{\parskip}{0.6em}
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+\begin{titlepage}
+    \centering
+    \vspace*{1.5cm}
+    \rule{\textwidth}{1pt}\\[0.4cm]
+    {\Huge \textbf{STUDENT GYMKHANA\\[0.5cm] MANAGEMENT SYSTEM}}\\[0.4cm]
+    \rule{\textwidth}{1pt}
+    \vspace{0.8cm}
+    {\LARGE Unified College Events Platform}
+    \vspace{2.5cm}
+    {\Large \textbf{A Project Report Submitted By:}}\\
+    {\large Anmol Kumar Jha (202451019)}\\
+    {\large Bhawesh Rao (202451034)}\\
+    {\large Harsh Parag Gohel (202451071)}\\
+    {\large Manush Patel (202451102)}
+    \vspace{1.5cm}
+    {\Large \textbf{Under the Supervision of:}}\\
+    {\large Prof. Pooja Mishra}\\
+    \vspace{0.2cm}
+    {\large \textit{Course: Software Engineering}}
+    \vfill
+    {\Large \textbf{Department of Computer Science and Engineering}}\\
+    {\Large \textbf{Indian Institute of Information Technology, Vadodara}}\\
+    \vspace{0.8cm}
+    {\large \textit{|| \textbf{उद्यमस्य समें किमपि भवति} ||}}\\
+    \vspace{0.8cm}
+    {\large April 2026}
+\end{titlepage}
+
+\newpage
+\section*{Acknowledgement}
+\addcontentsline{toc}{section}{Acknowledgement}
+We sincerely thank \textbf{Prof. Pooja Mishra} for her continuous guidance and support throughout this project. We also thank IIIT Vadodara and the Department of CSE for providing an excellent academic and technical environment. Finally, we appreciate the team collaboration that made this full-stack system possible.
+
+\newpage
+\section*{Abstract}
+\addcontentsline{toc}{section}{Abstract}
+The Student Gymkhana Management System is a secure full-stack web platform for managing college clubs, events, registrations, coordinator workflows, and results in one centralized system. The frontend is implemented using React (Vite) and Tailwind CSS, while the backend is implemented with Node.js and Express.js. Authentication is integrated with Clerk, and role-based access control is enforced for Admin, Coordinator, Student, and Visitor users.
+
+The relational data layer uses \textbf{MySQL}, designed with normalized tables and foreign key constraints to preserve integrity across users, clubs, events, registrations, and results. The platform addresses common operational issues such as fragmented announcements, duplicate registrations, and missing historical records. Comprehensive testing was performed using both black-box and white-box strategies, including automated backend tests with Jest and Supertest.
+
+\newpage
+\tableofcontents
+\newpage
+
+\section{Introduction}
+\subsection{Project Overview}
+The Student Gymkhana Management System is a centralized digital platform for campus extracurricular activities. It helps users discover events, register, manage participation, and publish outcomes using role-specific dashboards.
+
+\subsection{Purpose}
+The system replaces spreadsheet-driven and fragmented workflows with a consistent and secure process for end-to-end event lifecycle management.
+
+\subsection{Scope of the System}
+The project includes a responsive frontend client, secure REST APIs, role-based authorization, and a MySQL-backed persistence layer covering clubs, events, registrations, proposals, and results.
+
+\subsection{Issues and Problems Addressed}
+\begin{itemize}
+    \item \textbf{Fragmented Communication:} announcements were spread across multiple channels.
+    \item \textbf{Registration Errors:} manual systems caused duplicate or inconsistent records.
+    \item \textbf{Data Loss Risk:} historical event records were not consistently archived.
+    \item \textbf{Permission Control:} no strict separation between admin/coordinator/student actions.
+\end{itemize}
+
+\newpage
+\section{Requirement Analysis}
+\subsection{Functional Requirements}
+\begin{itemize}
+    \item \textbf{Student Module:} login, browse events, register/cancel registration, view results.
+    \item \textbf{Coordinator Module:} view assigned events, manage event details, submit proposals, view registrants.
+    \item \textbf{Admin Module:} manage user roles, assign coordinators, review proposals, manage clubs/events.
+    \item \textbf{Visitor Module:} limited access to visitor-open events.
+\end{itemize}
+
+\subsection{Non-Functional Requirements}
+\begin{itemize}
+    \item \textbf{Security:} Clerk-based auth + middleware authorization checks.
+    \item \textbf{Usability:} responsive and role-aware UI.
+    \item \textbf{Scalability:} normalized \textbf{MySQL} schema with indexed relational access.
+    \item \textbf{Reliability:} structured error handling and uniqueness constraints.
+\end{itemize}
+
+\subsection{User Stories}
+\begin{itemize}
+    \item As a Student, I want to track my registrations and outcomes.
+    \item As a Coordinator, I want to manage assigned events efficiently.
+    \item As an Admin, I want centralized control over users, roles, and event governance.
+\end{itemize}
+
+\newpage
+\section{Design and Architecture}
+\subsection{System Architecture}
+The system follows a client-server architecture where the React client interacts with Express REST APIs. The backend encapsulates business logic and persists state in MySQL.
+
+\subsection{API Design}
+\begin{table}[h!]
+\centering
+\begin{tabular}{@{}llll@{}}
+\toprule
+\textbf{Endpoint} & \textbf{Method} & \textbf{Description} & \textbf{Auth Required} \\ \midrule
+\texttt{/api/users/me} & GET & Fetch current user profile & Yes \\
+\texttt{/api/events} & GET & Fetch events with filters & Yes \\
+\texttt{/api/events} & POST & Create event & Admin only \\
+\texttt{/api/registrations/:eventId} & POST & Register for event & Yes \\
+\texttt{/api/admin/users/:id/role} & PATCH & Update user role & Admin only \\ \bottomrule
+\end{tabular}
+\caption{Core API Endpoints and Access Control}
+\end{table}
+
+\subsection{Folder Structure}
+\begin{lstlisting}[language=bash]
+Gymkhana/
+|-- client/
+|   |-- src/components
+|   |-- src/pages
+|   |-- src/lib
+|-- server/
+|   |-- src/config
+|   |-- src/middleware
+|   |-- src/routes
+|   |-- tests
+\end{lstlisting}
+
+\newpage
+\section{Implementation Details}
+\subsection{Frontend Implementation}
+React + Vite powers the frontend with Tailwind CSS for responsive UI. Route-level behavior depends on user role and authenticated API responses.
+
+\subsection{Backend Implementation}
+Node.js + Express backend uses middleware-first architecture (\texttt{requireAuth}, \texttt{attachUser}, \texttt{requireRole}) and route modules for users, events, registrations, clubs, coordinator, results, and admin.
+
+\subsection{Database Architecture}
+Data persistence uses \textbf{MySQL} with connection pooling (\texttt{mysql2/promise}), normalized schema, foreign keys, and uniqueness constraints (e.g., event-user registration uniqueness).
+
+\subsection{Authentication and Security}
+\begin{itemize}
+    \item Clerk handles user authentication and identity.
+    \item Bearer token is required on protected API routes.
+    \item Role-based access checks enforce endpoint-level authorization.
+\end{itemize}
+
+\newpage
+\section{Core Code Implementations}
+\subsection{Schema Highlights}
+\begin{lstlisting}[language=SQL, caption=server/src/config/schema.sql (excerpt)]
+CREATE TABLE IF NOT EXISTS users (
+  id VARCHAR(255) PRIMARY KEY,
+  email VARCHAR(255) NOT NULL UNIQUE,
+  role ENUM('student','coordinator','admin','visitor') NOT NULL DEFAULT 'student'
+);
+
+CREATE TABLE IF NOT EXISTS events (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  event_name VARCHAR(200) NOT NULL,
+  event_date DATETIME NOT NULL,
+  capacity INT NOT NULL DEFAULT 50,
+  visitor_open TINYINT(1) NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS registrations (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  event_id INT NOT NULL,
+  user_id VARCHAR(255) NOT NULL,
+  status ENUM('confirmed','cancelled','waitlisted') NOT NULL DEFAULT 'confirmed',
+  UNIQUE KEY uq_registration (event_id, user_id)
+);
+\end{lstlisting}
+
+\subsection{Event Route Behavior}
+\begin{lstlisting}[language=JavaScript, caption=server/src/routes/events.js (conceptual excerpt)]
+router.get('/', requireAuth, attachUser, async (req, res, next) => {
+  const isVisitor = req.user.role === 'visitor'
+  // visitors only see visitor_open events
+  // others see all events
+})
+\end{lstlisting}
+
+\newpage
+\section{Testing and Deployment}
+
+\subsection{Testing Methodology}
+Testing was performed using a mixed strategy:
+\begin{itemize}
+    \item \textbf{Black-box testing:} functional behavior verification from API/user perspective.
+    \item \textbf{White-box testing:} branch and path validation in middleware and routes.
+    \item \textbf{Automated testing:} Jest + Supertest for executable backend evidence.
+\end{itemize}
+
+\subsubsection{Black-box Test Cases (Executed)}
+\begin{table}[H]
+\centering
+\begin{small}
+\begin{tabular}{|p{1.4cm}|p{3.5cm}|p{4.1cm}|p{4.0cm}|p{1.2cm}|}
+\hline
+\textbf{Test ID} & \textbf{Scenario} & \textbf{Input/Action} & \textbf{Expected Result} & \textbf{Status} \\ \hline
+BB-01 & View My Registrations & GET \texttt{/api/registrations/my} & Returns authenticated user's registrations list & Pass \\ \hline
+BB-02 & Visitor Restriction & Visitor POST \texttt{/api/registrations/:eventId} for non visitor-open event & API returns \texttt{403 Forbidden} & Pass \\ \hline
+BB-03 & Duplicate Registration Handling & Repeat POST register for same user/event & API returns clear duplicate message (\texttt{400}) & Pass \\ \hline
+\end{tabular}
+\end{small}
+\caption{Executed Black-box API Test Cases}
+\end{table}
+
+\subsubsection{White-box Test Cases (Executed)}
+\begin{table}[H]
+\centering
+\begin{small}
+\begin{tabular}{|p{1.4cm}|p{3.8cm}|p{3.8cm}|p{4.0cm}|p{1.2cm}|}
+\hline
+\textbf{Test ID} & \textbf{Target} & \textbf{Branch/Path} & \textbf{Expected Result} & \textbf{Status} \\ \hline
+WB-01 & \texttt{requireRole} middleware & Missing \texttt{req.user} branch & Returns \texttt{401 Not authenticated} & Pass \\ \hline
+WB-02 & \texttt{requireRole} middleware & Insufficient role branch & Returns \texttt{403 Insufficient permissions} & Pass \\ \hline
+WB-03 & \texttt{requireRole} middleware & Allowed role branch & Calls \texttt{next()} exactly once & Pass \\ \hline
+\end{tabular}
+\end{small}
+\caption{Executed White-box Branch Tests}
+\end{table}
+
+\subsection{Automated Test Implementation Details}
+Automated tests were implemented in:
+\begin{itemize}
+    \item \texttt{server/tests/roles.middleware.test.js}
+    \item \texttt{server/tests/registrations.routes.test.js}
+\end{itemize}
+
+Testing framework and tools:
+\begin{itemize}
+    \item \texttt{jest}
+    \item \texttt{supertest}
+    \item \texttt{jest.config.js} for Node test environment
+\end{itemize}
+
+\subsection{Test Execution Result}
+Command used:
+\begin{lstlisting}[language=bash]
+cd server
+npm test
+\end{lstlisting}
+
+Observed output summary:
+\begin{itemize}
+    \item Test Suites: \textbf{2 passed, 2 total}
+    \item Tests: \textbf{6 passed, 6 total}
+    \item Snapshots: 0
+\end{itemize}
+
+\subsection{Local Setup and Deployment Instructions}
+\textbf{Prerequisites:}
+\begin{itemize}
+    \item Node.js (v18+)
+    \item MySQL (v8+)
+    \item Clerk project credentials
+\end{itemize}
+
+\textbf{Backend:}
+\begin{lstlisting}[language=bash]
+cd server
+npm install
+
+# create .env with MySQL and Clerk keys
+# DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME
+# CLERK_SECRET_KEY, CLERK_WEBHOOK_SECRET
+
+npm run db:setup
+npm run db:seed
+npm start
+\end{lstlisting}
+
+\textbf{Frontend:}
+\begin{lstlisting}[language=bash]
+cd client
+npm install
+
+# .env should contain:
+# VITE_API_URL
+# VITE_CLERK_PUBLISHABLE_KEY
+
+npm run dev
+\end{lstlisting}
+
+\newpage
+\section{Conclusion and Future Work}
+\subsection{Conclusion}
+The Student Gymkhana Management System successfully delivers a secure and maintainable digital workflow for extracurricular event management. The implemented architecture combines Clerk-based authentication, role-driven authorization, and a MySQL relational model to support robust event, club, and registration management.
+
+Testing outcomes were strong: both black-box and white-box checks passed, and automated backend tests using Jest + Supertest produced fully passing results (6/6 tests). This provides concrete evidence of functional correctness for key authorization and registration logic paths.
+
+\subsection{Future Enhancements}
+\begin{itemize}
+    \item Expand automated test coverage to admin, events, and results modules.
+    \item Add CI pipeline for automatic test execution on push.
+    \item Add audit logging and analytics dashboards.
+    \item Develop companion mobile app for event notifications.
+\end{itemize}
+
+\end{document}
